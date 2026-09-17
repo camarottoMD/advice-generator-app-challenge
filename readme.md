@@ -1,6 +1,6 @@
 # Advice Generator App
 
-Uma solução completa para o desafio de frontend do Frontend Mentor, desenvolvida para gerar conselhos aleatórios com base em uma API pública, mantendo a interface visual próxima ao mockup e priorizando experiência do usuário, performance e acessibilidade.
+Uma solução completa para o desafio de frontend do Frontend Mentor, desenvolvida para gerar conselhos aleatórios consumindo a Advice Slip API. A implementação busca manter a interface fiel ao mockup, priorizando experiência do usuário, performance e acessibilidade.
 
 ## Sumário
 
@@ -63,10 +63,10 @@ A aplicação atende aos principais requisitos esperados pelo desafio:
 - HTML5 semântico
 - CSS3 com variáveis e design tokens
 - JavaScript ES6+
-- Bootstrap 5 para utilidades e base visual
-- Fetch API para comunicação com a API externa
-- DevTools e inspeção de elementos para ajustes visuais e de comportamento
-- Acessibilidade web com foco visível e live regions
+- Bootstrap 5 (via CDN) e fonte `Manrope` (Google Fonts)
+- Fetch API com `AbortController` para timeout e `cache: "no-store"` para evitar respostas em cache
+- DevTools para depuração e ajustes visuais
+- Acessibilidade web com `aria-live`, `role` e foco visível
 
 ## Arquitetura e estrutura do projeto
 
@@ -124,38 +124,41 @@ http://localhost:8000
 
 ### Consumo da Advice Slip API
 
-A integração com a API foi feita com o método `fetch`, configurando `cache: "no-store"` para garantir que a resposta mais recente seja sempre utilizada, evitando cache do navegador que poderia impedir a mudança de conselho ao clicar repetidamente.
+A integração com a API é feita com `fetch` e configurada para `cache: "no-store"`, garantindo que cada clique solicite uma resposta nova (o navegador por padrão pode reaproveitar respostas com cache e bloquear a atualização do conselho).
 
-Além disso, foi definido um timeout com `AbortController`, o que reduz o risco de requisições pendentes e melhora o comportamento em conexões instáveis.
+Também foi usado `AbortController` para aplicar um timeout de requisição (atualmente `8000ms`), evitando requisições pendentes em conexões instáveis.
+
+Além disso, o código tenta reconsultar a API até `3` vezes quando o `id` retornado é igual ao atual, reduzindo a chance do usuário ver a mesma mensagem consecutivamente.
 
 ### Lógica de atualização do conteúdo
 
-A interface atualiza os elementos do card de forma encapsulada e segura, substituindo apenas o conteúdo necessário. A lógica também valida a estrutura da resposta da API antes de renderizar os dados, evitando erros caso o payload venha em um formato inesperado.
+A atualização do card é feita fora do DOM (clonando o nó, atualizando-o e trocando em uma única mutação), o que mantém a região `aria-live` mais previsível (anúncio atômico).
 
-Foi também implementada uma verificação para garantir que o conselho gerado seja diferente do atual. Quando a API retorna o mesmo ID, uma nova tentativa é feita em sequência, melhorando a percepção de responsividade da ação do usuário.
+O parser valida explicitamente o formato da resposta (presença de `slip.id` numérico e `slip.advice` como string não vazia) antes de renderizar. Em caso de formato inesperado, o fluxo lança um erro e exibe uma mensagem amigável ao usuário.
+
+Para melhorar a percepção de resposta, existe também um atraso antes de mostrar a mensagem de carregamento (após `1000ms`), evitando avisos rápidos desnecessários em respostas rápidas.
+
 
 ### Acessibilidade e UX
 
-A aplicação foi tratada com preocupação de UX e A11y, incluindo:
+A aplicação inclui várias melhorias de acessibilidade e usabilidade:
 
-- `aria-live` para anunciar atualizações do conteúdo sem interromper o fluxo do usuário;
-- `role="alert"` para mensagens de erro;
-- `aria-disabled` no botão em vez de desabilitar completamente o elemento, preservando a navegabilidade e a experiência de teclado;
-- foco visível em elementos interativos;
-- suporte a estado de carregamento sem bloquear a interação indevidamente;
-- fallback visual para situações em que o JavaScript não esteja disponível.
+- `aria-live="polite"` e `aria-atomic` para atualizações do conselho sem interromper o usuário;
+- mensagens de erro com `role="alert"` para anunciação imediata;
+- uso de `aria-disabled` no botão enquanto carrega (mantendo o foco e a navegabilidade por teclado);
+- foco visível e estados de hover/focus para feedback perceptível;
+- rótulo do botão pode ser temporariamente ocultado com a tecla `Escape` sem mover o foco — o rótulo retorna no próximo `focus` ou `pointerenter`;
+- fallback com `<noscript>` para instruir usuários sem JavaScript.
 
 ### Robustez e tratamento de erro
 
-A implementação inclui mecanismos para lidar com cenários comuns de falha:
+O fluxo de erro contempla:
 
-- resposta HTTP diferente de sucesso;
-- tempo de resposta excedido;
-- payload incompleto ou malformado;
-- repetição do mesmo conselho;
-- erro de rede ou indisponibilidade da API.
-
-Essas validações ajudam a manter a aplicação estável e tornam a experiência mais confiável mesmo em condições adversas.
+- HTTP não 2xx (exibe mensagem de erro amigável);
+- timeout de requisição (AbortController);
+- payload com formato inesperado (validação e fallback);
+- tentativas adicionais quando a API retorna o mesmo `id`;
+- exibição de mensagem de erro amigável ao usuário (texto atual: "Sorry, we couldn't load new advice. Please check your connection and try again.").
 
 ## Aprendizados e refinamentos
 
@@ -176,8 +179,8 @@ Também foi possível reforçar a importância de:
 
 ## Resultados alcançados
 
-O projeto conseguiu entregar uma solução funcional, elegante e alinhada ao protótipo do desafio, com boa experiência em diferentes tamanhos de tela e atenção especial a acessibilidade. A implementação demonstra uma base sólida para evolução em projetos mais complexos envolvendo consumo de APIs e interfaces dinâmicas.
+Entrega de uma solução estável e acessível que reproduz o layout do protótipo, com comportamento robusto frente a falhas de rede e reprodutibilidade reduzida de conselhos repetidos. A base é adequada para evoluções como caching controlado, internacionalização e testes automatizados.
 
 ## Status
 
-Projeto concluído com foco em qualidade visual, responsividade, funcionalidade e acessibilidade, atendendo aos requisitos do desafio proposto pelo Frontend Mentor.
+Projeto concluído e atualizado para refletir melhorias de robustez, mensagens de carregamento e práticas de acessibilidade implementadas no código.
